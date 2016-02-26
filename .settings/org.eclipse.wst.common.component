@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?><project-modules id="moduleCoreId" project-version="1.5.0">
+    <wb-module deploy-name="learningEssentials">
+        <wb-resource deploy-path="/" source-path="/apps/learningEssentials/common"/>
+        <wb-resource deploy-path="/" source-path="/apps/learningEssentials/iphone"/>
+        <wb-resource deploy-path="/" source-path="/apps/learningEssentials/android"/>
+        <wb-resource deploy-path="/" source-path="/apps/learningEssentials/ipad"/>
+        <property name="context-root" value="learningEssentials"/>
+    </wb-module>
+</project-modules>

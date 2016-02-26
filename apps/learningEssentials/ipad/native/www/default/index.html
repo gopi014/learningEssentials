@@ -1,0 +1,215 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+<!-- fav and touch icons -->
+        <link href="worklight/worklight.css" rel="stylesheet">
+        <link href="ico/apple-touch-icon-144-precomposed.png" rel="apple-touch-icon-precomposed" sizes="144x144">
+        <link href="ico/apple-touch-icon-114-precomposed.png" rel="apple-touch-icon-precomposed" sizes="114x114">
+        <link href="ico/apple-touch-icon-72-precomposed.png" rel="apple-touch-icon-precomposed" sizes="72x72">
+        <link href="ico/apple-touch-icon-57-precomposed.png" rel="apple-touch-icon-precomposed">
+<!-- Responsive Media Query Start-->
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<!-- Responsive Media Query End-->
+        <title>IBM Learning Essentials</title>
+        <link href="themes/le.min.css" rel="stylesheet">
+        <link href="css/style.css" rel="stylesheet">
+        <link href="themes/jquery.mobile.icons.min.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600" rel="stylesheet" type="text/css">
+        <link href="themes/jquery.mobile.structure-1.4.5.min.css" rel="stylesheet">
+        <link href="css/main.css" rel="stylesheet"> 
+        <link href="themes/jquery-confirm.min.css" rel="stylesheet"> 
+        <script>
+		// Define WL namespace.
+		var WL = WL ? WL : {};
+		/**
+		 * WLClient configuration variables.
+		 * Values are injected by the deployer that packs the gadget.
+		 */
+		 WL.StaticAppProps = {
+   "APP_DISPLAY_NAME": "learningEssentials",
+   "APP_ID": "learningEssentials",
+   "APP_SERVICES_URL": "\/apps\/services\/",
+   "APP_VERSION": "1.0",
+   "ENVIRONMENT": "ipad",
+   "LOGIN_DISPLAY_TYPE": "embedded",
+   "WORKLIGHT_NATIVE_VERSION": "582178118",
+   "WORKLIGHT_PLATFORM_VERSION": "6.2.0.01.20150430-1522",
+   "WORKLIGHT_ROOT_URL": "\/apps\/services\/api\/learningEssentials\/ipad\/"
+};
+</script>
+		<script src="worklight/cordova.js"></script>
+		<script src="worklight/wljq.js"></script>
+		<script src="worklight/worklight.js"></script>
+		<script src="worklight/checksum.js"></script>
+		<script src="themes/jquery-1.11.1.min.js"></script>
+<script src="themes/jquery.mobile-1.4.5.min.js"></script>
+<script src="themes/jquery.mobile.dynamic.popup.js"></script>
+<script src="js/custom.js"></script>
+<script src="themes/jquery-confirm.min.js"></script> 
+    </head>
+    <body>
+<!-- Login Start -->
+        <div data-role="page" data-theme="a" id="login">
+  <!-- Banner Start -->
+            <div align="center" class="banner-box"> 
+                <img alt="Login banner" class="img-responsive banner-img" src="images/login-banner.jpg"> </div>
+  <!-- Banner End -->
+            <div data-role="content"> 
+  <!-- Login Form Start -->
+                <div class="ui-body">
+                    <input id="j_username" placeholder="IBM Intranet User Name" type="text" value="">
+	<input id="j_password" placeholder="IBM Intranet Password" type="password" value="">
+	<a class="blue-grdnt" data-role="button" href="#" id="loginBtn">Login</a>
+                </div>
+  <!-- Login Form End -->
+            </div>
+        </div>
+<!-- Login End -->
+<!-- Dashboard Start -->
+        <div data-role="page" data-theme="a" id="dashboard"> 
+            <div data-role="header"> 
+                <h1>Learning Essentials</h1>
+                <a class="ui-btn ui-btn-right ui-corner-all ui-icon-power ui-btn-icon-notext" data-icon="power" data-iconpos="right" data-iconshadow="false" data-shadow="false" href="#" onclick="logout();">Menu</a> 
+            </div>
+            <div class="no-pad" data-role="content">
+    <!-- Tab Start -->
+                <div class="no-pad" data-role="tabs" id="tabs">
+		<!-- Tab Background Start -->
+                    <div class="tab-bg">
+                        <div data-role="navbar">
+                            <ul>
+                                <li>
+                                    <a class="" data-ajax="false" data-theme="c" href="#one">Dashboard</a>
+                                </li>
+                                <li id="employeetab">
+                                    <a data-ajax="false" data-theme="c" href="#two">Employee</a>
+                                </li>
+                                <li>
+                                    <a data-ajax="false" data-theme="c" href="#three">FAQ</a>
+                                </li>
+                            </ul>
+                        </div>	  
+                    </div>
+		<!-- Tab Background End -->
+	  <!-- Tab Container Start -->
+                    <div class="pad-20" id="one">
+		  <!-- Dashboard Tab Start --> 
+                        <div class="ui-body-d ui-content">
+                            <h1 class="base-color" id="givenname"></h1>
+                            <h4 class="base-color">Your THINK 40 Progress</h4>
+			<!-- Dashboard Report Start -->
+                            <div class="ui-corner-all custom-corners">
+                                <div class="ui-bar ui-bar-a" data-theme="e">
+                                    <h3>Current Progress</h3>
+                                </div>
+                                <div class="ui-body ui-body-a">
+                                    <div class="cstm-text" id="completedhours"></div>
+                                    <div class="meter" id="completedprogress">
+                                    </div>
+					 <!-- <div class="progress" id="completedprogress"> -->
+                                </div>
+					<!-- <div class="cstm-text">In-progress: 8.00 hrs.</div> -->
+					<!-- <div class="meter red">
+						<span style="width: 80%"></span>
+					</div> -->
+                                <p> Think Annual Progress </p>
+                                <p id="successmessage"> 
+                                    <img alt="successful" src="images/pass.png" style="width: 30px; height: 30px; float: left; margin-top: -5px; margin-right: 6px;"> <span class="green-txt"> Congratulations! You've completed 40+ hours of learning </span>
+                                </p>
+                            </div>
+                        </div>
+			<!-- Dashboard Report End -->
+			<!-- Employee Content Start -->				
+                        <ul data-inset="true" data-role="listview" id="draggregate">
+                            <li data-role="list-divider" data-theme="a"> Your DR </li>
+                            <li data-theme="d">
+                                <p id="drpercent">Overall Aggregate DR: 65%</p>
+                                <div class="meter blue" id="drmeter">
+                                </div>
+                            </li>
+                        </ul>				
+			<!-- Employee Content End -->
+                    </div>
+		  <!-- Dashboard Tab End --> 
+		  <!-- Employee Tab Start --> 
+                    <div id="two">
+				<!-- Search Start 
+				<input name="password" id="search" value="" placeholder="Search employee..." type="search">
+				Search End -->
+				<!-- Employee Content Start -->
+                        <ul data-filter="true" data-filter-placeholder="Search Employees" data-inset="true" data-role="listview" id="employeecontent">
+                            <li data-role="list-divider" data-theme="a"> Result </li>
+                        </ul>
+				<!-- Employee Content End -->
+                    </div>
+		  <!-- Employee Tab Start --> 
+		  <!-- FAQ Start -->
+                    <div id="three">
+                        <div data-content-theme="a" data-iconpos="right" data-role="collapsibleset" id="set">
+                            <div data-collapsed="true" data-role="collapsible" id="set1">
+                                <h3>What is THINK40?</h3>
+                                <p>During her 2013 IBMer Broadcast, Ginni Rometty requested IBMers self initiate a minimum of 40 hours of professional development every year to continuously build the skills our clients value most. This is still valid today! The goal of THINK40 is to encourage the building of expertise among all IBMers &ndash; as our clients consider the deep expertise of IBMers to be of equal value to the quality of our products and services. This is why we are making this investment in IBMer professional enrichment.</p>
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set2">
+                                <h3>Why are we doing this?</h3>
+                                <p>IBM&rsquo;s success is achieved through people. We must all grow, sharpen, and enhance our skills to succeed in a fiercely competitive, global economy. Our relentless focus on goals and the pressure to meet commitments tend to push development to the side. This is why we are setting an explicit expectation to invest in personal development. IBMers must challenge themselves to deliberately close learning gaps and ensure we remain innovative and successful over the long term.</p>
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set3">
+                                <h3>Who is eligible to participate?</h3>
+                                <p>All regular full and part time IBMers are eligible to participate, including any part time employees. For instances where a cost is incurred, you must gain manager approval prior to enrollment.</p>
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set4">
+                                <h3>How do I prepare for a career conversation with my manager?</h3>
+                                <p>Your PBC goal setting is a great opportunity to initiate a conversation with your manager. You can document your agreed learning goals into the development goals section of your PBC. Review the Career Conversations page for helpful advice on how to initiate, hold and follow through on a thoughtful and honest conversation about what it means to have a career at IBM.</p>
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set5">
+                                <h3>Does this mean I can attend a formal learning event or conference?</h3>
+                                <p>You and your manager should discuss possibilities, especially when cost or time away from work are involved. Some career milestones have learning requirements, and it&rsquo;s important to know what those are and fully engage in those opportunities. The guidance provided to managers and executives may also be helpful.</p>
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set6">
+                                <h3>How will professional development that requires funding, including travel, be managed, and approved?</h3>
+                                <p>It is the responsibility of the employee to work with their manager to choose the activities, for example classroom, certification, apprenticeship, job shadowing etc., and determine the time and cost associated to achieve their development plan. For instances where a cost is incurred, including travel cost, you must gain manager approval prior to enrollment, via your department&rsquo;s standard expense process.</p>
+                            </div>				
+                            <div data-collapsed="true" data-role="collapsible" id="set7">
+                                <h3>How do I find time to do this?</h3>
+                                <p>The answer is different for everyone, but viewing your development as a key action item will help you succeed. Our toughest competitors find time for personal enrichment and aim to stay ahead of us any way they can. For musicians, practice is a daily habit. In the same way, IBMers need to find time to practice and prepare for high-stakes moments which define our reputations and open new opportunities. The next time you travel, need a break from email, or are waiting somewhere, think of these moments as opportunities to invest in your learning. These small breaks, even 10 minutes, add up quickly. Enrolling in a course or deliberately scheduling time to read a book &ndash; it all counts! People who are curious, engaged, and always learning develop a formidable amount of expertise steadily over time. Regardless of how you choose to use your time&ndash;both work and personal&ndash;be intentional. Making time to learn plays a big role in who you become.
+						</p>
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set8">
+                                <h3>I have to account for my hours. How do I achieve my 40 hours of professional development within my contracted time, while still meeting my utilization rates or while still maintaining my billable hours?</h3>
+                                <p>Professional development is meant to be an opportunity to expand your knowledge and build your expertise. IBM wants you to seek the situations, projects, training, and interactions that make you an expert in your profession. Work with your manager to determine how to best grow your skills while still meeting client commitments. Opportunities should be considered both during and outside of normal work hours.</p>	
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set9">
+                                <h3>Where can I find learning?</h3>
+                                <p>IBM has a vast amount of learning on many topics and in different formats. Follow the links on this site to explore offerings. You should explore possibilities beyond IBM. You&rsquo;ll find an array of external web casts, courses, conferences, books, articles and more just a click away. And reach out to your network of colleagues, mentors, and leaders for learning recommendations. Talk to someone you respect and whose skills you admire. Ask about their experiences and the learning opportunities they would recommend.</p>		
+                            </div>	
+                            <div data-collapsed="true" data-role="collapsible" id="set10">
+                                <h3>I&rsquo;ve heard that my learning is being tracked. Why?</h3>
+                                <p>It&rsquo;s simple &ndash; our senior leaders want to demonstrate our commitment to learning. You and your manager should have a conversation and agree on the learning that&rsquo;s best for you. By tracking that learning, you and IBM can measure progress, and where needed, action can be taken to accelerate and improve your development. By having an expectation of this commitment IBM is a big company making a bold statement about personal development. We need to track progress to ensure that all IBMers are on board. As an individual, you should view this as a positive indication that our senior leaders want to know that you are taking advantage of this opportunity to grow your skills.</p>
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set11">
+                                <h3>What happens if I do not participate?</h3>
+                                <p>This learning challenge is an expectation of all IBMers. We&rsquo;ve gained respect inside and out by our ability to quickly and successfully rally around a new play. This is a play in support of enhancing the experiences we deliver to our clients; so it&rsquo;s important from many perspectives &mdash; including financial. IBMers at all levels need to advocate a culture of learning. Please do your part in joining this journey. It will drive your personal success as well.</p>	
+                            </div>
+                            <div data-collapsed="true" data-role="collapsible" id="set12">
+                                <h3>Will I be penalized for not using all 40 hours?</h3>
+                                <p>No. However, this is an investment in you and you are encouraged to take advantage of the opportunity to build your expertise and skills.</p>	
+                            </div>
+                        </div>
+                    </div>
+		  <!-- FAQ End -->
+                </div>
+	  <!-- Tab Container End -->
+            </div>
+	<!-- Tab End -->
+        </div>
+<!-- Dashboard End -->
+        <script src="js/initOptions.js"></script>
+    		<script src="js/main.js"></script>
+    		<script src="js/messages.js"></script>
+    		<script src="js/BonD.js"></script>
+<script src="js/Authen.js"></script>
+<script src="js/Base64.js"></script>
+<script src="js/LoginAdapter.js"></script>
+    </body>
+</html>

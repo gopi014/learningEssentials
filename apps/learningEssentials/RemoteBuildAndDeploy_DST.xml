@@ -1,0 +1,1270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="RemoteBuildAndDeploy_MYAPPNAME" basedir="." default="buildenvoy_iphone" >
+    
+    
+    <!--  User Properties -->
+    <!--  Uncomment any of these to avoid prompt -->
+    <!--
+     <property name="IBMIntranetID" value="youribmid@us.ibm.com"/>
+     <property name="IBMIntranetPW" value="enter_your_password"/>
+     <property name="SigningSetupiOS" value="default"/>
+     <property name="SigningSetupAndroid" value="Release"/>
+     <property name="AppCenter" value="IBM_EXTERNAL_DST_APPCENTER"/>
+     <property name="APPDescription" value="application description"/>
+     -->
+    
+    <!--  BuildEnvoy Properties -->
+    <property name="BuildServerURL" value="https://atlbzbuild01.atl.dst.ibm.com:8443"/>
+    <property name="be.temp.dir" value="../buildenvoy_temp"/>
+    <property name="javaVersion" value="${ant.java.version}"/>
+    
+    <target name="-welcome">
+        <echo>********************************************************************</echo>
+        <echo>********************************************************************</echo>
+        <echo>********************************************************************</echo>
+        <echo>Welcome to BE version 3.2. BE currently supports - iOS, Android etc.</echo>
+        <echo>********************************************************************</echo>
+        <echo>********************************************************************</echo>
+        <echo>********************************************************************</echo>
+    </target>
+    
+    
+    <!-- ##################################### COMMON ##################################### -->
+    
+    <target name="-check_appcenter_status"  description="checks appcenter status">
+        <input message="Please select which App Center you'd like to publish to:"  addproperty="AppCenter" defaultvalue="IBM_EXTERNAL_DST_APPCENTER" validargs="IBM_EXTERNAL_DST_APPCENTER,IBM_EXTERNAL_DST_APPCENTER_2,IBM_EXTERNAL_OFFICIAL_DEMOS_APPCENTER"/>
+        <echo>${AppCenter}</echo>
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be_appcenter_status.out" outputproperty="be_appcenter_status.out" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-s" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/appcenter/status/${AppCenter}"/>
+        </exec>
+        <condition property="iOS_appcenterError_found">
+            <contains string="${be_appcenter_status.out}" substring="error" casesensitive="false" />
+        </condition>
+        <fail
+        if="${iOS_appcenterError_found}"
+        message="Problems encountered! ${AppCenter} is not available now. Please try to use other App Center!" />
+    </target>
+    
+    <target name="-config">
+        <input message="Please enter your IBM Intranet ID:"  addproperty="IBMIntranetID" defaultvalue="youribmid@us.ibm.com"/>
+        <input message="Please enter your IBM Intranet password:"  addproperty="IBMIntranetPW" defaultvalue="enter_your_password" />
+        <input message="Please enter a short app description :"  addproperty="APPDescription" defaultvalue="application description" />
+        <echo>${IBMIntranetID}</echo>
+        <echo>${BuildServerURL}</echo>
+        <echo>${APPDescription}</echo>
+    </target>
+    
+    <target name="-clean" description="clean out temporary files">
+        <delete dir="${be.temp.dir}" failonerror="true"/>
+    </target>
+    
+    <!-- ##################################### Start to download iOS file ##################################### -->
+    <target name="-downloadIOSFileConfig">
+        <input message="You are accessing an .ipa file created using the Apple iOS SDK Enterprise Account for IBM.This file must only be used internally within IBM.Transmitting this file outside of IBM is in breach of the license and may be a violation of the Business Conduct Guidelines." addproperty="Warning" defaultvalue="Disagree" validargs="Agree,Disagree"/>
+        <condition property="iOSDownload_LegalWarning_Error">
+            <contains string="${Warning}" substring="disagree" casesensitive="false" />
+        </condition>
+        <fail if="${iOSDownload_LegalWarning_Error}" message="You need agree the Legal Warning" />
+        <input message="Please enter your IBM Intranet ID:"  addproperty="IBMIntranetID" defaultvalue="youribmid@us.ibm.com"/>
+        <input message="Please enter your IBM Intranet password:"  addproperty="IBMIntranetPW" defaultvalue="enter_your_password" />
+        <input message="Please enter the bundleId of the app you want to download:"  addproperty="BundleID" defaultvalue="com.ibm.cio.be.*" />
+        <input message="Please select the App Center you want to download your app from:"  addproperty="AppCenter" defaultvalue="IBM_EXTERNAL_DST_APPCENTER" validargs="IBM_EXTERNAL_DST_APPCENTER,IBM_EXTERNAL_DST_APPCENTER_2,IBM_EXTERNAL_OFFICIAL_DEMOS_APPCENTER"/>
+        <echo>${IBMIntranetID}</echo>
+        <echo>${BuildServerURL}</echo>
+        <echo>${BundleID}</echo>
+        <echo>${AppCenter}</echo>
+    </target>
+    
+    <target name="-prep_IOSDownload"  description="gather necessary artifacts">
+        <mkdir dir="${be.temp.dir}"/>
+    </target>
+    
+    <target name="download_IOS" depends="-welcome, -clean, -downloadIOSFileConfig, -prep_IOSDownload">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be.IOS.ipa"  outputproperty="be.IOS.ipa" logerror="true">
+            <arg value="--insecure" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="--form-string" />
+            <arg value="AppCenter=${AppCenter}" />
+            <arg value="--form-string" />
+            <arg value="BundleID=${BundleID}" />
+            <arg value="-D" />
+            <arg value="be.IOS.header" />
+            <arg value="-F" />
+            <arg value="http.protocol.expect-continue=true" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/fileDownload/IOS" />
+        </exec>
+        <condition property="isWindows">
+            <os family="windows" />
+        </condition>
+        
+        <condition property="isUnix">
+            <os family="unix" />
+        </condition>
+        <antcall target="-check_IOS_download"/>
+        <antcall target="-popup_IOS_MetaData_Info_Unix"/>
+        <antcall target="-popup_IOS_MetaData_Info_Windows"/>
+        <antcall target="-open_IOS_web"/>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>IOS APPLICATION HAS BEEN SUCCESSFULLY DOWNLOAD!!! </echo>
+    </target>
+    
+    <target name="-check_IOS_download">
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.iOS.header");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.iOS.header");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            // Check the header.
+            for (var line = br.readLine(); line != null; line = br.readLine()) {
+                if(line.contains("Error")){
+                    project.setProperty("IOS_downloaderror_failed",true);
+                }
+            }
+        </script>
+        <fail
+        if="IOS_downloaderror_failed"
+        message="Problems encountered.  Please check error message for more details.
+        Make sure your App (bundleId) exists in the selected App Center"    />
+    </target>
+    
+    <target name="-popup_IOS_MetaData_Info_Unix" if="isUnix">
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.iOS.header");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            
+                var file1 = new java.io.File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new java.io.FileWriter(file1);
+                bw1 = new java.io.BufferedWriter(fw1);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                importClass(java.io.FileWriter);
+                importClass(java.io.BufferedWriter);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.iOS.header");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            
+                var file1 = new File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new FileWriter(file1);
+                bw1 = new BufferedWriter(fw1);
+            }
+
+            // Read the file.
+            var json;
+            for (var line = br.readLine(); line != null; line = br.readLine()) {
+                if(line.contains("MetaData")){
+                    json = line.substring(10);
+                }
+            }
+            var struct = eval("(" + json + ")");
+            for(var i in struct){
+                project.setProperty("IOS_" + i,struct[i]);
+            }
+            
+            var type = project.getProperty("IOS_Type");
+            var name = project.getProperty("IOS_Name");
+            var appVersion = project.getProperty("IOS_AppVersion");
+            var description =  project.getProperty("IOS_Description");
+            var fileLocation = project.getProperty("basedir");
+            var newLocation = fileLocation + "/buildenvoy_temp";
+
+            var html = "&lt;html&gt;"
+            + "&lt;h2&gt;" + name + " metadata information to submit your app to the IBM App Store&lt;/h2&gt;"
+            + "This page provides you with your app's metadata information and binary file to fill out the application form to submit your production-ready app to the IBM App Store.&lt;br&gt;&lt;br&gt;"
+            + "Click on the following link to begin the process of submitting your production-ready app to the IBM App Store  &lt;a href='https://w3.tap.ibm.com/appcatalog/user' style='TEXT-DECORATION:none;font-style:italic;font-size:24px' target='_blank'&gt;Begin Here&lt;/a&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your " + name + " has been downloaded to the following location in your computer: " + newLocation + "&lt;br&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your app's metadata information: &lt;br&gt;"
+            + "&lt;h5&gt;Type : " + type + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Name : " + name + "&lt;/h5&gt;"
+            + "&lt;h5&gt;App Version : " + appVersion + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Description : " + description + "&lt;/h5&gt;"
+            + "&lt;h5&gt;OS : iOS&lt;/h5&gt;"
+            + "&lt;/html&gt;";
+            fw1.write(html);
+            fw1.flush();
+            fw1.close();
+        </script>
+        <move file="${be.temp.dir}/be.IOS.ipa" tofile="${be.temp.dir}/${IOS_Name}"/>
+    </target>
+    <target name="-popup_IOS_MetaData_Info_Windows" if="isWindows">
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.iOS.header");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            
+                var file1 = new java.io.File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new java.io.FileWriter(file1);
+                bw1 = new java.io.BufferedWriter(fw1);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                importClass(java.io.FileWriter);
+                importClass(java.io.BufferedWriter);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.iOS.header");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            
+                var file1 = new File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new FileWriter(file1);
+                bw1 = new BufferedWriter(fw1);
+            }
+
+            // Read the file.
+            var json;
+            for (var line = br.readLine(); line != null; line = br.readLine()) {
+                if(line.contains("MetaData")){
+                    json = line.substring(10);
+                }
+            }
+            var struct = eval("(" + json + ")");
+            for(var i in struct){
+                project.setProperty("IOS_" + i,struct[i]);
+            }
+            
+            var type = project.getProperty("IOS_Type");
+            var name = project.getProperty("IOS_Name");
+            var appVersion = project.getProperty("IOS_AppVersion");
+            var description =  project.getProperty("IOS_Description");
+            var fileLocation = project.getProperty("basedir");
+            var newLocation = fileLocation + "\\buildenvoy_temp";
+
+            var html = "&lt;html&gt;"
+            + "&lt;h2&gt;" + name + " metadata information to submit your app to the IBM App Store&lt;/h2&gt;"
+            + "This page provides you with your app's metadata information and binary file to fill out the application form to submit your production-ready app to the IBM App Store.&lt;br&gt;&lt;br&gt;"
+            + "Click on the following link to begin the process of submitting your production-ready app to the IBM App Store  &lt;a href='https://w3.tap.ibm.com/appcatalog/user' style='TEXT-DECORATION:none;font-style:italic;font-size:24px' target='_blank'&gt;Begin Here&lt;/a&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your " + name + " has been downloaded to the following location in your computer: " + newLocation + "&lt;br&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your app's metadata information: &lt;br&gt;"
+            + "&lt;h5&gt;Type : " + type + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Name : " + name + "&lt;/h5&gt;"
+            + "&lt;h5&gt;App Version : " + appVersion + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Description : " + description + "&lt;/h5&gt;"
+            + "&lt;h5&gt;OS : iOS&lt;/h5&gt;"
+            + "&lt;/html&gt;";
+            fw1.write(html);
+            fw1.flush();
+            fw1.close();
+        </script>
+        <move file="${be.temp.dir}/be.IOS.ipa" tofile="${be.temp.dir}/${IOS_Name}"/>
+    </target>
+    <!-- Forward to IBM App Store -->
+    <target name="-open_IOS_web" >
+        <exec executable="explorer" osfamily="windows" failonerror="false" >
+            <arg value="${be.temp.dir}\MetaDataInfo.html" />
+        </exec>
+        <exec executable="open" osfamily="unix" failonerror="true" >
+            <arg value="${be.temp.dir}/MetaDataInfo.html" />
+        </exec>
+    </target>
+    <!-- ##################################### End to download iOS file ##################################### -->
+    
+    <!-- ##################################### Start to download Android file ##################################### -->
+    <target name="-downloadAndroidFileConfig">
+        <input message="Please enter your IBM Intranet ID:"  addproperty="IBMIntranetID" defaultvalue="youribmid@us.ibm.com"/>
+        <input message="Please enter your IBM Intranet password:"  addproperty="IBMIntranetPW" defaultvalue="enter_your_password" />
+        <input message="Please enter the package ID, to find the package ID, open yourWorklightproject->apps->yourWorklightfolder->android->natives->AndroidManifest.xml, you will see an attribute named package"  addproperty="BundleID" defaultvalue="com.ibm.cio.be.*" />
+        <input message="Please select the App Center you want to download your app from:"  addproperty="AppCenter" defaultvalue="IBM_EXTERNAL_DST_APPCENTER" validargs="IBM_EXTERNAL_DST_APPCENTER,IBM_EXTERNAL_DST_APPCENTER_2,IBM_EXTERNAL_OFFICIAL_DEMOS_APPCENTER"/>
+        <echo>${IBMIntranetID}</echo>
+        <echo>${BuildServerURL}</echo>
+        <echo>${BundleID}</echo>
+        <echo>${AppCenter}</echo>
+    </target>
+    
+    <target name="-prep_AndroidDownload"  description="gather necessary artifacts">
+        <mkdir dir="${be.temp.dir}"/>
+    </target>
+    
+    <target name="download_Android" depends="-welcome, -clean, -downloadAndroidFileConfig, -prep_AndroidDownload">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be.Android.apk"  outputproperty="be.Android.apk" logerror="true">
+            <arg value="--insecure" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="--form-string" />
+            <arg value="AppCenter=${AppCenter}" />
+            <arg value="--form-string" />
+            <arg value="BundleID=${BundleID}" />
+            <arg value="-D" />
+            <arg value="be.Android.header" />
+            <arg value="-F" />
+            <arg value="http.protocol.expect-continue=true" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/fileDownload/android" />
+        </exec>
+        <condition property="isWindows">
+            <os family="windows" />
+        </condition>
+        
+        <condition property="isUnix">
+            <os family="unix" />
+        </condition>
+        <antcall target="-check_android_download"/>
+        <antcall target="-popup_android_MetaData_Info_Windows"/>
+        <antcall target="-popup_android_MetaData_Info_Unix"/>
+        <antcall target="-open_android_web"/>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>Android APPLICATION HAS BEEN SUCCESSFULLY DOWNLOAD!!! </echo>
+    </target>
+    
+    <target name="-check_android_download">
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.Android.header");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.Android.header");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            // Check the header.
+            for (var line = br.readLine(); line != null; line = br.readLine()) {
+                if(line.contains("Error")){
+                    project.setProperty("android_downloaderror_failed",true);
+                }
+            }
+        </script>
+        <fail
+        if="android_downloaderror_failed"
+        message="Problems encountered.  Please check error message for more details.
+        Make sure your App (packageName) exists in the selected App Center"    />
+    </target>
+    
+    <target name="-popup_android_MetaData_Info_Windows" if="isWindows">
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.Android.header");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            
+                var file1 = new java.io.File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new java.io.FileWriter(file1);
+                bw1 = new java.io.BufferedWriter(fw1);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                importClass(java.io.FileWriter);
+                importClass(java.io.BufferedWriter);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.Android.header");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            
+                var file1 = new File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new FileWriter(file1);
+                bw1 = new BufferedWriter(fw1);
+            }
+
+            // Read the file.
+            var json;
+            for (var line = br.readLine(); line != null; line = br.readLine()) {
+                if(line.contains("MetaData")){
+                    json = line.substring(10);
+                }
+            }
+            var struct = eval("(" + json + ")");
+            for(var i in struct){
+                project.setProperty("Android_" + i,struct[i]);
+            }
+            
+            var type = project.getProperty("Android_Type");
+            var name = project.getProperty("Android_Name");
+            var appVersion = project.getProperty("Android_AppVersion");
+            var description =  project.getProperty("Android_Description");
+            var fileLocation = project.getProperty("basedir");
+            var newLocation = fileLocation + "\\buildenvoy_temp";
+
+            var html = "&lt;html&gt;"
+            + "&lt;h2&gt;" + name + " metadata information to submit your app to the IBM App Store&lt;/h2&gt;"
+            + "This page provides you with your app's metadata information and binary file to fill out the application form to submit your production-ready app to the IBM App Store.&lt;br&gt;&lt;br&gt;"
+            + "Click on the following link to begin the process of submitting your production-ready app to the IBM App Store  &lt;a href='https://w3.tap.ibm.com/appcatalog/user' style='TEXT-DECORATION:none;font-style:italic;font-size:24px' target='_blank'&gt;Begin Here&lt;/a&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your " + name + " has been downloaded to the following location in your computer: " + newLocation + "&lt;br&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your app's metadata information: &lt;br&gt;"
+            + "&lt;h5&gt;Type : " + type + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Name : " + name + "&lt;/h5&gt;"
+            + "&lt;h5&gt;App Version : " + appVersion + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Description : " + description + "&lt;/h5&gt;"
+            + "&lt;h5&gt;OS : Android&lt;/h5&gt;"
+            + "&lt;/html&gt;";
+            fw1.write(html);
+            fw1.flush();
+            fw1.close();
+        </script>
+        <move file="${be.temp.dir}/be.Android.apk" tofile="${be.temp.dir}/${Android_Name}"/>
+    </target>
+    
+    <target name="-popup_android_MetaData_Info_Unix" if="isUnix">
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.Android.header");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            
+                var file1 = new java.io.File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new java.io.FileWriter(file1);
+                bw1 = new java.io.BufferedWriter(fw1);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                importClass(java.io.FileWriter);
+                importClass(java.io.BufferedWriter);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.Android.header");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            
+                var file1 = new File(project.getProperty("be.temp.dir") + "/MetaDataInfo.html");
+                fw1 = new FileWriter(file1);
+                bw1 = new BufferedWriter(fw1);
+            }
+            
+            // Read the file.
+            var json;
+            for (var line = br.readLine(); line != null; line = br.readLine()) {
+                if(line.contains("MetaData")){
+                    json = line.substring(10);
+                }
+            }
+            var struct = eval("(" + json + ")");
+            for(var i in struct){
+                project.setProperty("Android_" + i,struct[i]);
+            }
+            
+            var type = project.getProperty("Android_Type");
+            var name = project.getProperty("Android_Name");
+            var appVersion = project.getProperty("Android_AppVersion");
+            var description =  project.getProperty("Android_Description");
+            var fileLocation = project.getProperty("basedir");
+            var newLocation = fileLocation + "/buildenvoy_temp";
+            
+            var html = "&lt;html&gt;"
+            + "&lt;h2&gt;" + name + " metadata information to submit your app to the IBM App Store&lt;/h2&gt;"
+            + "This page provides you with your app's metadata information and binary file to fill out the application form to submit your production-ready app to the IBM App Store.&lt;br&gt;&lt;br&gt;"
+            + "Click on the following link to begin the process of submitting your production-ready app to the IBM App Store  &lt;a href='https://w3.tap.ibm.com/appcatalog/user' style='TEXT-DECORATION:none;font-style:italic;font-size:24px' target='_blank'&gt;Begin Here&lt;/a&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your " + name + " has been downloaded to the following location in your computer: " + newLocation + "&lt;br&gt;&lt;br&gt;&lt;br&gt;"
+            + "Your app's metadata information: &lt;br&gt;"
+            + "&lt;h5&gt;Type : " + type + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Name : " + name + "&lt;/h5&gt;"
+            + "&lt;h5&gt;App Version : " + appVersion + "&lt;/h5&gt;"
+            + "&lt;h5&gt;Description : " + description + "&lt;/h5&gt;"
+            + "&lt;h5&gt;OS : Android&lt;/h5&gt;"
+            + "&lt;/html&gt;";
+            fw1.write(html);
+            fw1.flush();
+            fw1.close();
+        </script>
+        <move file="${be.temp.dir}/be.Android.apk" tofile="${be.temp.dir}/${Android_Name}"/>
+    </target>
+    <!-- Forward to IBM App Store -->
+    <target name="-open_android_web" >
+        <exec executable="explorer" osfamily="windows" failonerror="false" >
+            <arg value="${be.temp.dir}\MetaDataInfo.html" />
+        </exec>
+        <exec executable="open" osfamily="unix" failonerror="true" >
+            <arg value="${be.temp.dir}/MetaDataInfo.html" />
+        </exec>
+    </target>
+    <!-- ##################################### End to download Android file ##################################### -->
+    
+    <!-- ##################################### Start to WQA On-Premises #####################################-->
+    <target name="-WQAOnPremisesConfig">
+        <input message="Please enter your IBM Intranet ID:"  addproperty="IBMIntranetID" defaultvalue="youribmid@us.ibm.com"/>
+        <input message="Please enter your IBM Intranet password:"  addproperty="IBMIntranetPW" defaultvalue="enter_your_password" />
+        <input message="Please select your platform:" addproperty="BuildTypeId" defaultvalue="IOS" validargs="IOS,Android" />
+        <input message="Please enter your WQA application_id: (https://{WQA-url}/application/{application_id})" addproperty="ApplicationID" defaultvalue="1" />
+        <input message="Please enter the bundleId (iOS) or packageId (Android) of the app you want to upload:"  addproperty="BundleID" defaultvalue="com.ibm.cio.be.*" />
+        <input message="Please select the App Center where your app is located:"  addproperty="AppCenter" defaultvalue="IBM_EXTERNAL_DST_APPCENTER" validargs="IBM_EXTERNAL_DST_APPCENTER,IBM_EXTERNAL_DST_APPCENTER_2,IBM_EXTERNAL_OFFICIAL_DEMOS_APPCENTER"/>
+        <input message="Please enter your WQA user email:" addproperty="WQAID" defaultvalue="yourwqaid@us.ibm.com"/>
+        <input message="Please enter your WQA user password:" addproperty="WQAPW" defaultvalue="enter_your_wqa_password"/>
+        <echo>${IBMIntranetID}</echo>
+        <echo>${ApplicationID}</echo>
+        <echo>${BuildServerURL}</echo>
+        <echo>${BundleID}</echo>
+        <echo>${AppCenter}</echo>
+        <echo>${WQAID}</echo>
+    </target>
+    
+    <target name="-prep_WQAOnPremises"  description="gather necessary artifacts">
+        <mkdir dir="${be.temp.dir}"/>
+    </target>
+    <target name="WQAOnPremises" depends="-welcome, -clean, -WQAOnPremisesConfig, -prep_WQAOnPremises">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be.WQA.out"  outputproperty="be.WQA.out" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-s" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="--form-string" />
+            <arg value="AppCenter=${AppCenter}" />
+            <arg value="--form-string" />
+            <arg value="BundleID=${BundleID}" />
+            <arg value="--form-string" />
+            <arg value="ApplicationID=${ApplicationID}" />
+            <arg value="--form-string" />
+            <arg value="WQAID=${WQAID}" />
+            <arg value="--form-string" />
+            <arg value="WQAPW=${WQAPW}" />
+            <arg value="-F" />
+            <arg value="http.protocol.expect-continue=true" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/WQAUpload/${BuildTypeId} " />
+        </exec>
+        <condition property="isWindows">
+            <os family="windows" />
+        </condition>
+        <condition property="isUnix">
+            <os family="unix" />
+        </condition>
+        <echo message = "${be.WQA.out}"/>
+        <condition property="WQAOnPremises_error_found">
+            <contains string="${be.WQA.out}" substring="error" casesensitive="false" />
+        </condition>
+        <fail
+        if="${WQAOnPremises_error_found}"
+        message="Failed" />
+        <antcall target="-setup_WQA_Web"/>
+        <antcall target="-open_WQA_web"/>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>WQA ON PREMISES SUCCESSFULLY!!! </echo>
+    </target>
+    <target name="-setup_WQA_Web">
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/WQAWeb.html");
+                fw = new java.io.FileWriter(file);
+                bw = new java.io.BufferedWriter(fw);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileWriter);
+                importClass(java.io.BufferedWriter);
+                var file = new File(project.getProperty("be.temp.dir") + "/WQAWeb.html");
+                fw = new FileWriter(file);
+                bw = new BufferedWriter(fw);
+            }
+            
+            var file = new File(project.getProperty("be.temp.dir") + "/WQAWeb.html");
+            fw = new FileWriter(file);
+            bw = new BufferedWriter(fw);
+            var applicationID = project.getProperty("ApplicationID");
+            var html = "&lt;meta http-equiv='refresh' content='0.1;url=https://wqa01.edst.ibm.com/application/"
+            + applicationID
+            + "/versions/list/'&gt;";
+            fw.write(html);
+            fw.flush();
+            fw.close();
+        </script>
+    </target>
+    <target name="-open_WQA_web" >
+        <exec executable="explorer" osfamily="windows" failonerror="false" >
+            <arg value="${be.temp.dir}\WQAWeb.html" />
+        </exec>
+        <exec executable="open" osfamily="unix" failonerror="true" >
+            <arg value="${be.temp.dir}/WQAWeb.html" />
+        </exec>
+    </target>
+    <!-- ##################################### End to WQA On-Premises #####################################-->
+    
+    <target name="buildenvoy_all" depends="-welcome, -check_appcenter_status, -config, -config_ios, -config_android" description="build and deploy">
+        <antcall target="buildenvoy_iphone"/>
+        <antcall target="buildenvoy_android"/>
+        <antcall target="buildenvoy_ipad"/>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>iPhone, Android, and iPad APPLICATIONS HAVE BEEN SUCCESSFULLY BUILT AND DEPLOYED!!! </echo>
+    </target>
+    
+    <target name="-config_ios" depends="-set_signingSetupiOS">
+        <input message="Please select which iOS SDK to compile: " addproperty="iOSSDK" defaultvalue="iphoneos" validargs="iphoneos6.1,iphoneos7.0,iphoneos7.1,iphoneos8.0,iphoneos8.1,iphoneos8.2,iphoneos8.3,iphoneos8.4"/>
+        <echo>${iOSSDK}</echo>
+        <input message="Please select which Xcode version to compile:" addproperty="XcodeVersion" defaultvalue="Xcode.app" validargs="Xcode.app,Xcode64.app,Xcode-beta.app,Xcode-beta-5.app"/>
+        <echo>${XcodeVersion}</echo>
+    </target>
+    
+    <target name="-config_ios_default">
+        <input message="Please select provisioning profile to use for iOS"  addproperty="SigningSetupiOS_Default" defaultvalue="default" validargs="default,apns_enabled,other(more than one APNS)"/>
+        <condition property="set_anps_name">
+            <equals arg1="${SigningSetupiOS_Default}" arg2="other(more than one APNS)" trim="true"/>
+        </condition>
+    </target>
+    
+    <target name="-config_ios_apns_name" depends="-config_ios_default" if="set_anps_name">
+        <echo>Need to specify the APNS NAME</echo>
+        <input message="Please input the name for your provisioning profile"  addproperty="SigningSetupiOS" defaultvalue="APNS_YOUR_APP_NAME"/>
+        <echo>Setting APNS_NAME to: ${SigningSetupiOS}</echo>
+    </target>
+    
+    <target name="-set_signingSetupiOS" depends="-config_ios_apns_name">
+        <property name="SigningSetupiOS" value="${SigningSetupiOS_Default}" />
+        <echo>Setting APNS_DEFAULT to: ${SigningSetupiOS}</echo>
+    </target>
+    
+    <target name="-config_android">
+        <input message="Please select keystore to use for Android"  addproperty="SigningSetupAndroid" defaultvalue="Release" validargs="Release"/>
+        <input message="Please select which Android SDK to compile: \nandroid-8 = Android 2.2\nandroid-10 = Android 2.3.3\nandroid-15 = Android 4.0.3\nandroid-16 = Android 4.1.2\nandroid-17 Android 4.2.2\nandroid-18 Android 4.3.1\nandroid-19 Android 4.4.2\nandroid-20 Android 4.4W.2\nandroid-21 Android 5.0.1\nandroid-22 Android 5.1.1\nandroid-MNC Android M (Preview)" addproperty="androidSDK" defaultvalue="android-15" validargs="android-8,android-10,android-15,android-16,android-17,android-18,android-19,android-20,android-21,android-22,android-MNC"/>
+        <echo>${SigningSetupAndroid}</echo>
+        <echo>${androidSDK}</echo>
+    </target>
+    
+    <!-- ##################################### IPHONE ##################################### -->
+    
+    <target name="-prep_iphone" depends="-clean" description="gather necessary artifacts">
+        <mkdir dir="${be.temp.dir}"/>
+        <zip destfile="${be.temp.dir}/be_iphone.zip"  basedir="iphone/native"/>
+    </target>
+    
+    <target name="buildenvoy_iphone" depends="-welcome, -prep_iphone, -check_appcenter_status, -config, -config_ios" description="launch remote iphone build and deploy app">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be.iphone.out"  outputproperty="be.iphone.out" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-s" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="--form-string" />
+            <arg value="signingSetup=${SigningSetupiOS}" />
+            <arg value="--form-string" />
+            <arg value="AppCenter=${AppCenter}" />
+            <arg value="--form-string" />
+            <arg value="appDescr=${APPDescription}" />
+            <arg value="--form-string" />
+            <arg value="iOSSDK=${iOSSDK}" />
+            <arg value="--form-string" />
+            <arg value="XcodeVersion=${XcodeVersion}" />
+            <arg value="-F" />
+            <arg value="file=@be_iphone.zip" />
+            <arg value="-F" />
+            <arg value="http.protocol.expect-continue=true" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/upload/iphone" />
+        </exec>
+        
+        <condition property="iphone_registrationError_found">
+            <contains string="${be.iphone.out}" substring="RegistrationError" casesensitive="true" />
+        </condition>
+        <fail
+        if="${iphone_registrationError_found}"
+        message="Problems encountered! Please apply to be a Build Envoy User first." />
+
+        
+        <condition property="iphone_bundleIdError_found">
+            <contains string="${be.iphone.out}" substring="BundleIDError" casesensitive="true" />
+        </condition>
+        <fail
+        if="${iphone_bundleIdError_found}"
+        message="Problems encountered! Please ensure your BundleID is set to comply with com.ibm.cio.be.* format." />
+        
+        <condition property="iphone_authorizationError_found">
+            <contains string="${be.iphone.out}" substring="AuthorizationError" casesensitive="true" />
+        </condition>
+        <fail
+        if="${iphone_authorizationError_found}"
+        message="Problems encountered! Please ensure your IntranetId or Password is correct." />
+        
+        <antcall target="-wait_for_iphone_build"/>
+        <antcall target="-clean"/>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>iPhone APPLICATION HAS BEEN SUCCESSFULLY BUILT AND DEPLOYED!!! </echo>
+    </target>
+    
+    <target name="-get_iphone_buildID" description="gets iphone buildID">
+        <exec executable="tail" osfamily="unix" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be.iphone.json" >
+            <arg value="-1" />
+            <arg value="be.iphone.out" />
+        </exec>
+        
+        <exec executable="tail.bat" osfamily="windows" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be.iphone.json" >
+            <arg value="-1" />
+            <arg value="be.iphone.out" />
+        </exec>
+        
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.iphone.json");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.iphone.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            // Read the file.
+            // This assumes the file has no line breaks and is one line.
+            var json = br.readLine();
+            
+            // Evaluate the JSON.
+            var struct = eval("(" + json + ")");
+            
+            // Set each property in the project environment.
+            for (i in struct) {
+                project.setProperty("iphone_" + i,struct[i]);
+            }
+        </script>
+        <antcall target="-check_buildenvoy_iphone_status"/>
+    </target>
+    
+    <target name="-wait_for_iphone_build">
+        <waitfor maxwait="30" maxwaitunit="minute" checkevery="20" checkeveryunit="second">
+            <scriptcondition language="javascript" value="false">
+                call = project.createTask("antcall");
+                call.setInheritAll(true);
+                call.setInheritRefs(true);
+                call.setTarget("-get_iphone_buildID");
+                call.perform();
+                
+                if ("1.8".equals(project.getProperty("javaVersion"))) {
+                    var file = new java.io.File(project.getProperty("be.temp.dir") + "/be_iphone_status.json");
+                    fr = new java.io.FileReader(file);
+                    br = new java.io.BufferedReader(fr);
+                } else {
+                    importClass(java.io.File);
+                    importClass(java.io.FileReader);
+                    importClass(java.io.BufferedReader);
+                    var file = new File(project.getProperty("be.temp.dir") + "/be_iphone_status.json");
+                    fr = new FileReader(file);
+                    br = new BufferedReader(fr);
+                }
+                
+                echo = project.createTask("echo");
+                
+                // Read the file.
+                // This assumes the file has no line breaks and is one line.
+                var json = br.readLine();
+                
+                // Evaluate the JSON.
+                var struct = eval("(" + json + ")");
+                
+                if ("COMPLETED".equals(struct["state"]))  {
+                    self.setValue(true);
+                    if ("Cancelled".equals(struct["stage"]) || "Died".equals(struct["stage"])) {
+                        project.setProperty("iphone_build_cancelled",true);
+                        echo.setMessage("BUILD WAS CANCELLED... ");
+                        echo.perform();
+                    } else if ("Built".equals(struct["stage"])) {
+                        echo.setMessage("BUILD HAS COMPLETED AND iPhone APP HAS BEEN DEPLOYED.  DOWNLOAD APP FROM APP CENTER");
+                        echo.perform();
+                    } else if ("Failed".equals(struct["stage"])) {
+                        project.setProperty("iphone_build_failed",true);
+                        echo.setMessage("BUILD HAD FAILED AT STEP " + struct["current"] + ", PLEASE CHECK THE DETAILS OF YOUR ERROR THROUGH BUILD FORGE CONSOLE");
+                        echo.perform();
+                    }
+                } else {
+                    echo.setMessage("BUILD IN PROGRESS... " + struct["state"] + ": Step " + struct["current"] + " of " + struct["total"] + ": " + struct["stage"]);
+                    echo.perform();
+                    self.setValue(false);
+                }
+            </scriptcondition>
+        </waitfor>
+        <fail
+        if="iphone_build_failed"
+        message="Please go to Build Forge Console to check your issue details"    />
+        
+        <fail
+        if="iphone_build_cancelled"
+        message="Build request has been cancelled by administrator. Please try again or contact administrator to report problem."    />
+    </target>
+    
+    <target name="-check_buildenvoy_iphone_status"  description="checks build and deploy status for iphone build request">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be_iphone_status.out" outputproperty="be_iphone_status.out" errorproperty="be_iphone_status.err" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/status/${iphone_buildID}" />
+        </exec>
+        <antcall target="-get_buildenvoy_iphone_status"/>
+    </target>
+    
+    <target name="-get_buildenvoy_iphone_status" description="gets iphone build status">
+        <exec executable="tail" osfamily="unix" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be_iphone_status.json" >
+            <arg value="-1" />
+            <arg value="be_iphone_status.out" />
+        </exec>
+        
+        <exec executable="tail.bat" osfamily="windows" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be_iphone_status.json" >
+            <arg value="-1" />
+            <arg value="be_iphone_status.out" />
+        </exec>
+        
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be_iphone_status.json");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be_iphone_status.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            // Read the file.
+            // This assumes the file has no line breaks and is one line.
+            var json = br.readLine();
+            
+            // Evaluate the JSON.
+            var struct = eval("(" + json + ")");
+            
+            // Set each property in the project environment.
+            for (i in struct) {
+                project.setProperty("iphone_" + i,struct[i]);
+            }
+        </script>
+    </target>
+    
+    <!-- ##################################### ANDROID ##################################### -->
+    
+    <target name="-prep_android" depends="-clean" description="gather necessary artifacts">
+        <mkdir dir="${be.temp.dir}"/>
+        <zip destfile="${be.temp.dir}/be_android.zip"  basedir="android/native"/>
+    </target>
+    
+    <target name="buildenvoy_android" depends="-welcome, -prep_android, -check_appcenter_status, -config, -config_android" description="launch remote android build and deploy app">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be.android.out"  outputproperty="be.android.out" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-s" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="--form-string" />
+            <arg value="signingSetup=Release" />
+            <arg value="--form-string" />
+            <arg value="AppCenter=${AppCenter}" />
+            <arg value="--form-string" />
+            <arg value="appDescr=${APPDescription}" />
+            <arg value="--form-string" />
+            <arg value="androidSDK=${androidSDK}" />
+            <arg value="-F" />
+            <arg value="file=@be_android.zip" />
+            <arg value="-F" />
+            <arg value="http.protocol.expect-continue=true" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/upload/android" />
+        </exec>
+        
+        <condition property="android_registrationError_found">
+            <contains string="${be.android.out}" substring="RegistrationError" casesensitive="true" />
+        </condition>
+        <fail
+        if="${android_registrationError_found}"
+        message="Problems encountered! Please apply to be a Build Envoy User first." />
+
+        <echo message = "${be.android.out}"/>
+        <condition property="android_builderror_found">
+            <contains string="${be.android.out}" substring="error" casesensitive="true" />
+        </condition>
+        <fail
+        if="${android_builderror_found}"
+        message="Problems encountered.  Please check error message above for more details.
+        Ensure your id and password are correctly set."  />
+        <antcall target="-wait_for_android_build"/>
+        <antcall target="-clean"/>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>Android APPLICATION HAS BEEN SUCCESSFULLY BUILT AND DEPLOYED!!! </echo>
+    </target>
+    
+    <target name="-get_android_buildID" description="gets android buildID">
+        
+        <exec executable="tail" osfamily="unix" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be.android.json" >
+            <arg value="-1" />
+            <arg value="be.android.out" />
+        </exec>
+        
+        <exec executable="tail.bat" osfamily="windows" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be.android.json" >
+            <arg value="-1" />
+            <arg value="be.android.out" />
+        </exec>
+        
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.android.json");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.android.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            // Read the file.
+            // This assumes the file has no line breaks and is one line.
+            var json = br.readLine();
+            
+            // Evaluate the JSON.
+            var struct = eval("(" + json + ")");
+            
+            // Set each property in the project environment.
+            for (i in struct) {
+                project.setProperty("android_" + i,struct[i]);
+            }
+        </script>
+        <antcall target="-check_buildenvoy_android_status"/>
+    </target>
+    
+    <target name="-wait_for_android_build">
+        <waitfor maxwait="30" maxwaitunit="minute" checkevery="20" checkeveryunit="second">
+            <scriptcondition language="javascript" value="false">
+                call = project.createTask("antcall");
+                call.setInheritAll(true);
+                call.setInheritRefs(true);
+                call.setTarget("-get_android_buildID");
+                call.perform();
+                
+                if ("1.8".equals(project.getProperty("javaVersion"))) {
+                    var file = new java.io.File(project.getProperty("be.temp.dir") + "/be_android_status.json");
+                    fr = new java.io.FileReader(file);
+                    br = new java.io.BufferedReader(fr);
+                } else {
+                    importClass(java.io.File);
+                    importClass(java.io.FileReader);
+                    importClass(java.io.BufferedReader);
+                    var file = new File(project.getProperty("be.temp.dir") + "/be_android_status.json");
+                    fr = new FileReader(file);
+                    br = new BufferedReader(fr);
+                }
+                
+                echo = project.createTask("echo");
+                
+                var file = new File(project.getProperty("be.temp.dir") + "/be_android_status.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+                
+                // Read the file.
+                // This assumes the file has no line breaks and is one line.
+                var json = br.readLine();
+                
+                // Evaluate the JSON.
+                var struct = eval("(" + json + ")");
+                
+                if ("COMPLETED".equals(struct["state"]))  {
+                    self.setValue(true);
+                    if ("Cancelled".equals(struct["stage"]) || "Died".equals(struct["stage"])) {
+                        project.setProperty("android_build_cancelled",true);
+                        echo.setMessage("BUILD WAS CANCELLED... ");
+                        echo.perform();
+                    } else if ("Built".equals(struct["stage"])) {
+                        echo.setMessage("BUILD HAS COMPLETED AND android APP HAS BEEN DEPLOYED.  DOWNLOAD APP FROM APP CENTER");
+                        echo.perform();
+                    } else if ("Failed".equals(struct["stage"])) {
+                            project.setProperty("android_build_failed",true);
+                            echo.setMessage("BUILD HAD FAILED... CHECK WITH ADMINISTRATOR");
+                            echo.perform();
+                    }
+                } else {
+                    echo.setMessage("BUILD IN PROGRESS... " + struct["state"] + ": Step " + struct["current"] + " of " + struct["total"] + ": " + struct["stage"]);
+                    echo.perform();
+                    self.setValue(false);
+                }
+            </scriptcondition>
+        </waitfor>
+        <fail
+        if="android_build_failed"
+        message="Android Build has failed. Contact administrator for more details."    />
+        
+        <fail
+        if="android_build_cancelled"
+        message="Build request has been cancelled by administrator. Please try again or contact administrator to report problem."    />
+    </target>
+    
+    <target name="-check_buildenvoy_android_status"  description="checks build and deploy status for android build request">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be_android_status.out" outputproperty="be_android_status.out" errorproperty="be_android_status.err" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/status/${android_buildID}" />
+        </exec>
+        <antcall target="-get_buildenvoy_android_status"/>
+    </target>
+    
+    <target name="-get_buildenvoy_android_status" description="gets android build status">
+        <exec executable="tail" osfamily="unix" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be_android_status.json" >
+            <arg value="-1" />
+            <arg value="be_android_status.out" />
+        </exec>
+        
+        <exec executable="tail.bat" osfamily="windows" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be_android_status.json" >
+            <arg value="-1" />
+            <arg value="be_android_status.out" />
+        </exec>
+        
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be_android_status.json");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be_android_status.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            // Read the file.
+            // This assumes the file has no line breaks and is one line.
+            var json = br.readLine();
+            
+            // Evaluate the JSON.
+            var struct = eval("(" + json + ")");
+            
+            // Set each property in the project environment.
+            for (i in struct) {
+                project.setProperty("android_" + i,struct[i]);
+            }
+        </script>
+    </target>
+    
+    <!-- ##################################### IPAD ##################################### -->
+    
+    <target name="-prep_ipad" depends="-clean" description="gather necessary artifacts">
+        <mkdir dir="${be.temp.dir}"/>
+        <zip destfile="${be.temp.dir}/be_ipad.zip"  basedir="ipad/native"/>
+    </target>
+    
+    <target name="buildenvoy_ipad" depends="-welcome, -prep_ipad, -check_appcenter_status, -config, -config_ios" description="launch remote ipad build and deploy app">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be.ipad.out"  outputproperty="be.ipad.out" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-s" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="--form-string" />
+            <arg value="signingSetup=${SigningSetupiOS}" />
+            <arg value="--form-string" />
+            <arg value="AppCenter=${AppCenter}" />
+            <arg value="--form-string" />
+            <arg value="appDescr=${APPDescription}" />
+            <arg value="--form-string" />
+            <arg value="iOSSDK=${iOSSDK}" />
+            <arg value="--form-string" />
+            <arg value="XcodeVersion=${XcodeVersion}" />
+            <arg value="-F" />
+            <arg value="file=@be_ipad.zip" />
+            <arg value="-F" />
+            <arg value="http.protocol.expect-continue=true" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/upload/iphone" />
+        </exec>
+        
+        <condition property="ipad_registrationError_found">
+            <contains string="${be.ipad.out}" substring="RegistrationError" casesensitive="true" />
+        </condition>
+        <fail
+        if="${ipad_registrationError_found}"
+        message="Problems encountered! Please apply to be a Build Envoy User first." />
+        
+        <condition property="ipad_bundleIdError_found">
+            <contains string="${be.ipad.out}" substring="BundleIDError" casesensitive="true" />
+        </condition>
+        <fail
+        if="${ipad_bundleIdError_found}"
+        message="Problems encountered! Please ensure your BundleId is set to comply with com.ibm.cio.be.* format." />
+        
+        <condition property="ipad_authorizationError_found">
+            <contains string="${be.ipad.out}" substring="AuthorizationError" casesensitive="false" />
+        </condition>
+        <fail
+        if="${ipad_authorizationError_found}"
+        message="Problems encountered! Please ensure your IntranetId or Password is correct." />
+
+        <antcall target="-wait_for_ipad_build"/>
+        <antcall target="-clean"/>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>.</echo>
+        <echo>iPad APPLICATION HAS BEEN SUCCESSFULLY BUILT AND DEPLOYED!!! </echo>
+    </target>
+    
+    <target name="-get_ipad_buildID" description="gets ipad buildID">
+        
+        <exec executable="tail" osfamily="unix" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be.ipad.json" >
+            <arg value="-1" />
+            <arg value="be.ipad.out" />
+        </exec>
+        <exec executable="tail.bat" osfamily="windows" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be.ipad.json" >
+            <arg value="-1" />
+            <arg value="be.ipad.out" />
+        </exec>
+        
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be.ipad.json");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be.ipad.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            // Read the file.
+            // This assumes the file has no line breaks and is one line.
+            var json = br.readLine();
+            
+            // Evaluate the JSON.
+            var struct = eval("(" + json + ")");
+            
+            // Set each property in the project environment.
+            for (i in struct) {
+                project.setProperty("ipad_" + i,struct[i]);
+            }
+        </script>
+        <antcall target="-check_buildenvoy_ipad_status"/>
+    </target>
+    
+    <target name="-wait_for_ipad_build">
+        <echo>WAITING for ipad BUILD Results</echo>
+        <waitfor maxwait="30" maxwaitunit="minute" checkevery="20" checkeveryunit="second">
+            <scriptcondition language="javascript" value="false">
+                call = project.createTask("antcall");
+                call.setInheritAll(true);
+                call.setInheritRefs(true);
+                call.setTarget("-get_ipad_buildID");
+                call.perform();
+                
+                if ("1.8".equals(project.getProperty("javaVersion"))) {
+                    var file = new java.io.File(project.getProperty("be.temp.dir") + "/be_ipad_status.json");
+                    fr = new java.io.FileReader(file);
+                    br = new java.io.BufferedReader(fr);
+                } else {
+                    importClass(java.io.File);
+                    importClass(java.io.FileReader);
+                    importClass(java.io.BufferedReader);
+                    var file = new File(project.getProperty("be.temp.dir") + "/be_ipad_status.json");
+                    fr = new FileReader(file);
+                    br = new BufferedReader(fr);
+                }
+                
+                echo = project.createTask("echo");
+                
+                var file = new File(project.getProperty("be.temp.dir") + "/be_ipad_status.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+                
+                // Read the file.
+                // This assumes the file has no line breaks and is one line.
+                var json = br.readLine();
+                
+                // Evaluate the JSON.
+                var struct = eval("(" + json + ")");
+                
+                if ("COMPLETED".equals(struct["state"]))  {
+                    self.setValue(true);
+                    if ("Cancelled".equals(struct["stage"]) || "Died".equals(struct["stage"])) {
+                        project.setProperty("ipad_build_cancelled",true);
+                        echo.setMessage("BUILD WAS CANCELLED... ");
+                        echo.perform();
+                    } else if ("Built".equals(struct["stage"])) {
+                        echo.setMessage("BUILD HAS COMPLETED AND ipad APP HAS BEEN DEPLOYED.  DOWNLOAD APP FROM APP CENTER");
+                        echo.perform();
+                    } else if ("Failed".equals(struct["stage"])) {
+                        project.setProperty("ipad_build_failed",true);
+                        echo.setMessage("BUILD HAD FAILED AT STEP " + struct["current"] + ", PLEASE CHECK THE DETAILS OF YOUR ERROR THROUGH BUILD FORGE CONSOLE");
+                        echo.perform();
+                    }
+                } else {
+                    echo.setMessage("BUILD IN PROGRESS... " + struct["state"] + ": Step " + struct["current"] + " of " + struct["total"] + ": " + struct["stage"]);
+                    echo.perform();
+                    self.setValue(false);
+                }
+            </scriptcondition>
+        </waitfor>
+        <fail
+        if="ipad_build_failed"
+        message="Please go to Build Forge Console to check your issue details"  />
+        
+        <fail
+        if="ipad_build_cancelled"
+        message="Build request has been cancelled by administrator. Please try again or contact administrator to report problem."   />
+    </target>
+    
+    <target name="-check_buildenvoy_ipad_status"  description="checks build and deploy status for ipad build request">
+        <exec executable="curl" failonerror="true"  dir="${be.temp.dir}" output="${be.temp.dir}/be_ipad_status.out" outputproperty="be_ipad_status.out" errorproperty="be_ipad_status.err" logerror="true">
+            <arg value="-i" />
+            <arg value="--insecure" />
+            <arg value="-u" />
+            <arg value="${IBMIntranetID}:${IBMIntranetPW}" />
+            <arg value="${BuildServerURL}/BuildForgeProxy/envoy/status/${ipad_buildID}" />
+        </exec>
+        <antcall target="-get_buildenvoy_ipad_status"/>
+    </target>
+    
+    <target name="-get_buildenvoy_ipad_status" description="gets ipad build status">
+        <exec executable="tail" osfamily="unix" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be_ipad_status.json" >       
+            <arg value="-1" />
+            <arg value="be_ipad_status.out" />
+        </exec>
+        
+        <exec executable="tail.bat" osfamily="windows" failonerror="true"  dir="${be.temp.dir}"  output="${be.temp.dir}/be_ipad_status.json" >       
+            <arg value="-1" />
+            <arg value="be_ipad_status.out" />
+        </exec>
+        
+        <script language="javascript">
+            if ("1.8".equals(project.getProperty("javaVersion"))) {
+                var file = new java.io.File(project.getProperty("be.temp.dir") + "/be_ipad_status.json");
+                fr = new java.io.FileReader(file);
+                br = new java.io.BufferedReader(fr);
+            } else {
+                importClass(java.io.File);
+                importClass(java.io.FileReader);
+                importClass(java.io.BufferedReader);
+                var file = new File(project.getProperty("be.temp.dir") + "/be_ipad_status.json");
+                fr = new FileReader(file);
+                br = new BufferedReader(fr);
+            }
+            
+            var file = new File(project.getProperty("be.temp.dir") + "/be_ipad_status.json");
+            fr = new FileReader(file);
+            br = new BufferedReader(fr);
+            
+            // Read the file. 
+            // This assumes the file has no line breaks and is one line.
+            var json = br.readLine();
+            
+            // Evaluate the JSON.
+            var struct = eval("(" + json + ")");
+            
+            // Set each property in the project environment.
+            for (i in struct) {
+                project.setProperty("ipad_" + i,struct[i]);
+            }
+        </script>
+    </target>
+</project>

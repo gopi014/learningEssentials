@@ -1,0 +1,34 @@
+
+/* Stylesheet content from css/main.css in folder common */
+.ui-header .ui-title, .ui-footer .ui-title {
+	white-space: nowrap !important;
+	overflow: visible !important;
+}
+.ui-page-theme-a .ui-btn:focus {
+	box-shadow:none !important;
+}
+html head + body .ui-btn.ui-btn-c:focus{
+	box-shadow:none !important;
+}
+.ui-page-theme-a .ui-btn:focus, html .ui-bar-a .ui-btn:focus, html .ui-body-a .ui-btn:focus, html body .ui-group-theme-a .ui-btn:focus, html head + body .ui-btn.ui-btn-a:focus, .ui-page-theme-a .ui-focus, html .ui-bar-a .ui-focus, html .ui-body-a .ui-focus, html body .ui-group-theme-a .ui-focus, html head + body .ui-btn-a.ui-focus, html head + body .ui-body-a.ui-focus {
+	box-shadow:none !important;
+}
+.ui-collapsible-heading-toggle {
+    white-space : normal !important;
+    text-align: left !important;
+/* Stylesheet content from css/main.css in folder ipad */
+
+/* this CSS file extends the application CSS file found under common\css */
+
+/*Optional iOS 7 status bar filler*/
+#wl_ios7bar{
+	background-color: white;
+	height: 15pt;
+	position: fixed;
+	top: 0;
+	left : 0;
+	width:100%;
+}
+body.wl_ios7{
+	padding-top: 15pt;
+}

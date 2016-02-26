@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tns:loginConfiguration xmlns:tns="http://www.worklight.com/auth/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+		<!-- Licensed Materials - Property of IBM
+			 5725-I43 (C) Copyright IBM Corp. 2006, 2013. All Rights Reserved.
+			 US Government Users Restricted Rights - Use, duplication or
+             disclosure restricted by GSA ADP Schedule Contract with IBM Corp. -->	
+
+	<!-- 
+      <staticResources>
+        <resource id="subscribeServlet" securityTest="SubscribeServlet">
+            <urlPatterns>/subscribeSMS*;/receiveSMS*</urlPatterns>
+        </resource>
+    </staticResources>
+      
+       -->
+
+   <!--  Sample security tests  
+         Even if not used there will be some default webSecurityTest and mobileSecurityTest 
+         
+		 Attention: If you are adding an app authenticity realm to a security test, 
+		 you must also update the application-descriptor.xml. Please refer to the user documentation 
+		 on application authenticity for environment specific guidelines. -->   
+	
+	 <securityTests>
+       	<customSecurityTest name="WL_IIPAuthenticatorRealmTest">
+            <test realm="wl_directUpdateRealm" step="1"/>
+            <test isInternalUserID="true" realm="WL_IIPAuthenticatorRealm"/>
+        </customSecurityTest>    		
+
+	</securityTests> 
+	
+	<realms>
+		<realm loginModule="WL_IIPLoginModule" name="WL_IIPAuthenticatorRealm">
+            <className>com.ibm.bluepages.auth.WLIIPAuthenticator</className>
+        </realm>
+    	
+	</realms>
+
+	<loginModules>
+		<loginModule name="WL_IIPLoginModule">
+            <className>com.ibm.bluepages.auth.WLIIPLoginModule</className>
+        </loginModule>
+	</loginModules>
+
+</tns:loginConfiguration>
